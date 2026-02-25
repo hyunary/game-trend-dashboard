@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🎮 게임 트렌드 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --accent:  #f7c948;
+  --green:   #3fb950;
+  --red:     #f85149;
+  --blue:    #58a6ff;
+  --cyan:    #57c4e5;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif; padding:24px 16px; }
+
+/* ── 헤더 ── */
+.header { text-align:center; margin-bottom:32px; }
+.header h1 { font-size:26px; font-weight:800; color:var(--accent); margin-bottom:6px; }
+.header .subtitle { font-size:13px; color:var(--muted); }
+.update-badge { display:inline-block; margin-top:10px; background:var(--surface);
+  border:1px solid var(--border); border-radius:20px; padding:4px 14px;
+  font-size:12px; color:var(--muted); }
+
+/* ── 그리드 ── */
+.grid-2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin-bottom:16px; }
+.grid-1 { margin-bottom:16px; }
+
+/* ── 카드 ── */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
+.card-title { font-size:14px; font-weight:700; color:var(--accent); margin-bottom:14px;
+  display:flex; align-items:center; gap:8px; }
+
+/* ── 게임 행 ── */
+.game-row { display:flex; align-items:center; gap:10px; padding:8px 0;
+  border-bottom:1px solid var(--border); }
+.game-row:last-child { border-bottom:none; }
+.medal { font-size:18px; width:28px; text-align:center; flex-shrink:0; }
+.game-name { flex:1; font-size:14px; color:var(--blue); text-decoration:none; }
+.game-name:hover { text-decoration:underline; }
+.peak-val { font-size:13px; color:var(--muted); white-space:nowrap; }
+.rank-tag { font-size:12px; color:var(--cyan); background:rgba(87,196,229,.12);
+  border-radius:4px; padding:2px 6px; }
+.badge-new { font-size:10px; font-weight:700; color:#fff; background:var(--green);
+  border-radius:4px; padding:2px 6px; flex-shrink:0; }
+.badge-spike { font-size:10px; font-weight:700; color:#fff; background:var(--red);
+  border-radius:4px; padding:2px 6px; flex-shrink:0; white-space:nowrap; }
+
+/* ── 뉴스 ── */
+.news-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0;
+  border-bottom:1px solid var(--border); }
+.news-row:last-child { border-bottom:none; }
+.news-num { font-size:12px; color:var(--muted); width:18px; flex-shrink:0; padding-top:2px; }
+.news-title { font-size:13px; color:var(--text); text-decoration:none; line-height:1.5; }
+.news-title:hover { color:var(--blue); }
+
+/* ── Cross 이력 ── */
+.cross-row { display:flex; align-items:center; gap:12px; padding:8px 0;
+  border-bottom:1px solid var(--border); }
+.cross-row:last-child { border-bottom:none; }
+.cross-date { font-size:12px; color:var(--muted); width:90px; flex-shrink:0; }
+.badge-golden { font-size:11px; font-weight:700; color:#000; background:var(--accent);
+  border-radius:4px; padding:2px 8px; flex-shrink:0; }
+.badge-dead { font-size:11px; font-weight:700; color:#fff; background:var(--red);
+  border-radius:4px; padding:2px 8px; flex-shrink:0; }
+.cross-game { font-size:13px; color:var(--text); }
+
+/* ── 차트 그리드 ── */
+.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; margin-bottom:16px; }
+.chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; }
+.chart-title { font-size:13px; font-weight:700; color:var(--accent); margin-bottom:12px; }
+
+/* ── 기타 ── */
+.empty-msg { font-size:13px; color:var(--muted); padding:12px 0; }
+.footer { text-align:center; font-size:12px; color:var(--muted); margin-top:32px; padding-top:16px;
+  border-top:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <h1>🎮 게임 트렌드 대시보드</h1>
+  <p class="subtitle">Steam 인기 게임 · 인벤 뉴스 · Golden/Dead Cross 모니터</p>
+  <span class="update-badge">🕗 마지막 업데이트: 2026년 02월 25일 23:10</span>
+</div>
+
+<!-- 행 1: Steam Top5 + 인벤 뉴스 -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">🎮 Steam 인기 게임 TOP 5</div>
+    <p class="empty-msg">데이터 없음</p>
+  </div>
+  <div class="card">
+    <div class="card-title">📰 인벤 최신 뉴스</div>
+    <p class="empty-msg">뉴스 데이터 없음</p>
+  </div>
+</div>
+
+<!-- 행 2: 신규 진입 + 급증 게임 -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">🌱 Top 100 신규 진입 게임</div>
+    <p class="empty-msg">오늘 신규 진입 게임 없음</p>
+  </div>
+  <div class="card">
+    <div class="card-title">🔥 동시접속 급증 게임</div>
+    <p class="empty-msg">오늘 급증 게임 없음</p>
+  </div>
+</div>
+
+<!-- 행 3: MA 차트 -->
+<div class="card grid-1">
+  <div class="card-title">📡 Cross 모니터 — 7일 / 30일 이동평균</div>
+  <div class="chart-grid" id="chartGrid">
+    <p class="empty-msg">차트 데이터 누적 중… (7일 후 활성화)</p>
+  </div>
+</div>
+
+<!-- 행 4: Cross 이력 -->
+<div class="card grid-1">
+  <div class="card-title">⚡ Golden / Dead Cross 이력</div>
+  <p class="empty-msg">아직 Cross 이력 없음 (데이터 누적 중…)</p>
+</div>
+
+<div class="footer">
+  데이터 출처: Steam API · 인벤(inven.co.kr) · SteamDB<br/>
+  매일 오전 08:10 자동 갱신 · Generated 2026년 02월 25일 23:10
+</div>
+
+<script>
+// ─── 인라인 데이터 ────────────────────────────────────────
+const CHARTS  = {};
+const HISTORY = [];
+
+// ─── 차트 렌더링 ──────────────────────────────────────────
+const chartDefaults = {
+  responsive: true,
+  interaction: { mode:'index', intersect:false },
+  plugins: {
+    legend: { display:false },
+    tooltip: {
+      backgroundColor:'#1c2128',
+      borderColor:'#30363d',
+      borderWidth:1,
+      titleColor:'#e6edf3',
+      bodyColor:'#c9d1d9',
+      callbacks: {
+        label: item => {
+          if (item.raw === null) return null;
+          const v = item.raw;
+          const fmt = v >= 1000000 ? (v/1000000).toFixed(2)+'M' : (v/1000).toFixed(0)+'K';
+          return ` ${item.dataset.label}: ${fmt}`;
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: { color:'rgba(48,54,61,0.5)' },
+      ticks: { color:'#6e7681', font:{ size:9 }, maxRotation:45,
+        callback(val,i) {
+          const lbl = this.getLabelForValue(val);
+          if (!lbl) return '';
+          const parts = lbl.split('-');
+          return parts[2] === '01' || i === 0 ? lbl : '';
+        }
+      }
+    },
+    y: {
+      grid: { color:'rgba(48,54,61,0.5)' },
+      ticks: { color:'#8b949e', font:{ size:10 },
+        callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : (v/1000).toFixed(0)+'K'
+      },
+      beginAtZero: false
+    }
+  }
+};
+
+Object.entries(CHARTS).forEach(([appId, cd]) => {
+  const canvas = document.getElementById('chart_' + appId);
+  if (!canvas) return;
+  new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: cd.labels,
+      datasets: [
+        {
+          label: 'Daily Peak',
+          data: cd.raw,
+          borderColor: 'rgba(76,154,255,0.4)',
+          backgroundColor: 'rgba(76,154,255,0.08)',
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+          order: 3,
+        },
+        {
+          label: '7일 MA',
+          data: cd.ma7,
+          borderColor: '#57c4e5',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.35,
+          spanGaps: false,
+          order: 2,
+        },
+        {
+          label: '30일 MA',
+          data: cd.ma30,
+          borderColor: '#f7c948',
+          borderWidth: 2,
+          borderDash: [5,3],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+          spanGaps: false,
+          order: 1,
+        },
+      ]
+    },
+    options: chartDefaults
+  });
+});
+</script>
+</body>
+</html>
